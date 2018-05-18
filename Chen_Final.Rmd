@@ -1,0 +1,272 @@
+---
+title: "Chen_Final_Cereal"
+output: html_document
+---
+# CMSC320 Final Project: Data Science with Cereal
+## Introduction
+
+Hello, if you are reading this you are probably interested in learning some data science. This tutorial will walk you through the various steps a data scientist goes through, using data from a cereal data set, taken from: https://www.kaggle.com/crawford/80-cereals
+
+Breakfast is the most important meal of the day. I thought it would be interesting to explore one of the most popular breakfast foods to see just what exactly I am eating every time I take a bit of Cheerios. Through this tutorial not only will we get familiar with the basic steps of data science, but we will also get to know what our favorite cereals are made out of. (And maybe even think about healthier choices)
+
+### Contents
+1) Data Preparation: Collecting and Processing
+2) Exploratory Data Anaylsis
+3) Machine Learning: Unsupervised Learning 
+4) Conclusion
+
+# Getting Started
+Before we dive into the data science tutorial in R, there are a few things that must be done. In order to proceed with the tutorial, be sure to download the cereal data set, and install the following packages in R Studio: tidyverse, lubridate, gridExtra, factoextra
+
+
+```{r setup, results="hide"}
+library(tidyverse)
+library(lubridate)
+library(gridExtra)
+library(factoextra)
+```
+
+# I Data Preparation: Collection and Processing
+
+### 1) Import the "cereal.csv" file and create a dataframe.
+
+If you open up the dataframe, we see that there are 80 different brands of cereals. Each have nutrition facts and other information, such as manufacturer, type of cereal, rating and more. Some of the data values are not as intuitive as the calorie count. For example, the 'N' in the mfr column, or manufacturer, stands for Nabisco. You can take a look at the data details in the link above, to better understand what the data values mean.
+
+#### Data Curation
+Fortunately, this dataset is already ready-to-go, and we don't have to worry about data curation. Normally, datasets don't come looking nice and ready, and would require a few steps prep the data. Data curation includes, scraping data from HTML pages, organizing and formatting the data frames, to make them readable and usable.
+
+```{r cereal_input}
+csv_file <- "cereal.csv"
+cereal_data <- read_csv(csv_file)
+cereal_data %>%
+  head()
+
+```
+
+### 2) Make sure the data is clean
+#### Handling Missing Data and Data Imputation
+The next step would be to make sure all the values in the data table are valid. We can do this by defining the classifications we would expect and checking that the data follow these rules. This step is where we handle missing data, if there are any. 
+
+```{r missing data}
+sum(is.na(cereal_data))
+```
+
+Again forturnately, all the data exists and we do not need to worry about imputation. However, if the case were that data was missing, we would need to determine whether or not the data was missing at random. Depending on the situation, missing data can be an indicator of levels that were too low or too high to detect and was thus missing. In other cases, data could be missing due to negligence. For example if the data set was about injuries, a data value could be missing because the injury was so severe the victim was near death. The injury may not have been on the standardize classification and thus was omitted. It is up to you, the data scientist, to choose how missing data should be dealt with.
+
+
+# II Exploratory Data Analysis
+
+Exploratory Data Analysis, also known as EDA, allows us to inspect the dataset and understand it better before we perform any machine learning. Earlier, we only took a glimpse at this table. Now we will take a closer look.
+We want to see what trends there are, to find out what causes higher popularity in the cereals. EDA gives a chance to analyze the metrics of the dataset to discover trends or relationships between the variables. For our particular case it will allow us to see which factors have a significant contribution to the rating. I chose to only look at sugar, calories, sodium and vitamins, but don't limit yourself. Be curious and creative, who knows what relationships you might discover.
+
+Here I display box and whisker plots of the 4 attributes I want to analyze: sugar, calories, sodium and vitamins. From the plot we see the average values per manufacturer and how the data is skewed. This reveals information between variables, whether they are directly proportional, inversely proportional or not related at all.
+
+```{r cereal_stats}
+
+sugar_plot <- cereal_data %>%
+  ggplot(mapping=aes(x=mfr, y=sugars, color = mfr)) +
+  geom_boxplot() +
+  ggtitle("Amount Sugar in Cereals") +
+  xlab("Manufacturers") +
+  ylab("Sugar (g)")
+
+cal_plot <- cereal_data %>%
+  ggplot(mapping=aes(x=mfr, y=calories, color = mfr)) +
+  geom_boxplot()+
+  ggtitle("Amount Calories in Cereals") +
+  xlab("Manufacturers") +
+  ylab("Calories (cal)")
+
+sod_plot <- cereal_data %>%
+  ggplot(mapping=aes(x=mfr, y=sodium, color = mfr)) +
+  geom_boxplot()+
+  ggtitle("Amount Sodium in Cereals") +
+  xlab("Manufacturers") +
+  ylab("Sodium (mg)")
+
+vita_plot <- cereal_data %>%
+  ggplot(mapping=aes(x=mfr, y=vitamins, color = mfr)) +
+  geom_boxplot()+
+  ggtitle("Amount Vitamins in Cereals") +
+  xlab("Manufacturers") +
+  ylab("Vitamins (FDA recommended %)")
+
+ grid.arrange(sugar_plot, cal_plot, sod_plot, vita_plot, ncol=2)
+ 
+cereal_data %>%
+  ggplot(mapping=aes(x=mfr, y=rating, color = mfr)) +
+  geom_boxplot()+
+  ggtitle("Overall Ratings of Cereals") +
+  xlab("Manufacturers") +
+  ylab("Rating %")
+
+
+
+```
+
+From the plots, we observe that Nabisco had the highest average ratings. Looking at the other metrics: sugars, calories, sodium, we see that Nabisco cereals tend to have much less compared to its competitors.
+
+#### Linear Regression
+Lets do a linear regression to see if we can find out anything else:
+```{r facet}
+
+facet_sugar <- cereal_data %>%
+  ggplot(aes(x=sugars, y=rating, color = mfr)) +
+  facet_grid(.~mfr, scale = "free_x")+
+  geom_point() +
+  geom_smooth(method=lm) +
+  ggtitle("Sugar vs Ratings of Cereals") +
+  xlab("Sugar (g)")+
+  ylab("Ratings (%)") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+facet_cal <- cereal_data %>%
+  ggplot(aes(x=calories, y=rating, color = mfr)) +
+  facet_grid(.~mfr, scale = "free_x")+
+  geom_point() +
+  geom_smooth(method=lm) +
+  ggtitle("Calories vs Ratings of Cereals") +
+  xlab("Calories (cal)")+
+  ylab("Ratings (%)") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+facet_sod <- cereal_data %>%
+  ggplot(aes(x=sodium, y=rating, color = mfr)) +
+  facet_grid(.~mfr, scale = "free_x")+
+  geom_point() +
+  geom_smooth(method=lm) +
+  ggtitle("Sodium vs Ratings of Cereals") +
+  xlab("Sodium (mg)")+
+  ylab("Ratings (%)") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+facet_vita <- cereal_data %>%
+  ggplot(aes(x=vitamins, y=rating, color = mfr)) +
+  facet_grid(.~mfr, scale = "free_x")+
+  geom_point() +
+  geom_smooth(method=lm) +
+  ggtitle("Vitamins vs Ratings of Cereals") +
+  xlab("Vitamins (FDA recommended %)")+
+  ylab("Ratings (%)") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+facet_sugar
+facet_cal
+facet_sod
+facet_vita
+
+```
+
+We notice that as sugar increase, ratings decrease. Similarly, ratings and carlories are inversely proportional. For sodium and vitamins, there doesn't seem to be any correlation. Lets continue our linear regression with just sugars and calories. 
+
+```{r lin_reg}
+lin_reg_sugar <- lm(rating~sugars, data=cereal_data)
+broom::tidy(lin_reg_sugar)
+
+lin_reg_cal <- lm(rating~calories, data=cereal_data)
+broom::tidy(lin_reg_cal)
+
+lin_reg_sc <- lm(rating~sugars*calories, data=cereal_data)
+broom::tidy(lin_reg_sc)
+```
+
+We perform a linear regression on both sugars and calories. However, from the facet graphs, we noticed that the sugars and calories graphs had very differnt slopes. As a result, it would be best for us to include an interaction term to account that ratings depends on both sugars and calories. For each of the linear regressions, we find that the p value is much less than .05. For sugars we observe $1.15*10^{-15} < .05$. For calories we see $4.14*10^{-12} < .05$. Because we observe that the p value is small, we reject the null hypothesis and predict that there is a relationship between sugar and ratings, and calories and ratings.
+
+Lets take a look at the results from our interaction linear regression:
+```{r interaction_stats}
+
+sc_stats <- lin_reg_sc %>%
+  broom::tidy()
+
+sug <- sc_stats[2, "estimate"]
+cal <- sc_stats[3, "estimate"]
+
+lin_stats <- data.frame(c("Sugar", "Calories"), 
+                       c(sug, cal))
+ 
+names(lin_stats) <- c("Attribute", "Rating")
+lin_stats
+
+```
+
+The results indicate that for every gram increase in sugar, there is a 5.03 % decrease in rating. Similarly, for every calorie increase in the cereal, there is a .45 decrease in rating.
+
+# III Machine Learning
+
+Machine learning is typically when one analyzes a response based on given values and predictors. These are known as Supervised Methods. However, to extract patterns on variable without analyzing the response, we must use what is known as "Unsupervised Methods." 
+
+### K Means Clustering
+One example of this is Clustering. The goal of clustering is to organize objects that are similar to each other into groups. Objects that are dissimilar to each other are placed in other groups. What results is clustering, certain data points gravitate towards one another. This method's goal is to measure the similarity between objects and group them together. This allows us to spot trends and formulate hypotheses about certain relationships between variables.
+
+
+Before we create the clusters, we want to find out what the optimal number of clusters for this data set is. We can do this by locating the breaking point, where the curve sort of flattens out. This means that increaseing the cluster K will not improve the clusters significantly.
+
+```{r}
+wide_df <- cereal_data %>%
+  select(name, mfr, calories, protein, fat, sodium, fiber, carbo, sugars, potass, rating) 
+
+wss <- 0
+
+for (i in 1:10) {
+  output <- kmeans(x = wide_df[, 3:11], centers = i, nstart = 20)
+  wss[i] <- output$tot.withinss
+}
+
+data_frame(Clusters = 1:10, WSS = wss) %>% 
+  ggplot(aes(x = Clusters, y = WSS)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(name = "Number of Clusters", breaks = 1:10, minor_breaks = NULL) +
+  scale_y_continuous(name = "Within Groups Sum of Squares") +
+  theme_minimal() +
+  ggtitle ("Optimal Number of Clusters")
+```
+
+From the plot we see that the optimal number of clusters is 3 or 4.This is where the curve has the biggest slope changes.
+
+```{r}
+
+output <- kmeans(x = wide_df[, 3:11], centers = 3, nstart = 20)
+
+output
+
+```
+
+From the cluster data we see that it agrees with our linear regression predictions. A lower sugar and calorie amount correlates to a higher rating. Some interesting statistics reveal that higher levels of fat correlate to higher calories. Potassium and protein seem to be directly proportional to each other. 
+
+```{r}
+
+output <- eclust(x = wide_df[, 3:11], FUNcluster = "kmeans", k = 3, graph = FALSE)
+output
+
+fviz_cluster(output, ellipse = TRUE, ellipse.type = "norm", ellipse.level = 0.95, ellipse.alpha = 0.1) +
+  theme_bw()
+
+```
+
+From the clusters, we see that there is a lot of overlap, indicating that there are few distinguishing attributes in the data set; most of the data is very similar to each other.
+
+#### Principal Component Analysis (PCA)
+PCA is a dimensionality reduction method. This allows the data scientist to 'translate' high dimensional space data into a smaller number of dimensions. 
+```{r}
+PCA_data <- cereal_data %>% 
+  select(name, mfr, calories, protein, fat, sodium, fiber, carbo, sugars, potass, rating)
+
+# Remove observations with NAs
+PCA_data <- PCA_data[complete.cases(PCA_data),]
+
+PCA_cereals <- prcomp(PCA_data[, 3:11], scale. = TRUE)
+
+# Obtain Summary of PCA
+summary(PCA_cereals)
+```
+
+
+```{r}
+fviz_eig(PCA_cereals)
+
+```
+
+# Conclusion
+
+To recap, we were about to use linear regression to estimate the relationship between sugars/calories and ratings. We also used PCA and Clustering to find patterns with the variables without having to analyze the reponse. The project can be further extended to analyze the other attributes that weren't analyzed and to extend the supervised learning. Also, this study can be extended to other foods such as yogurt, snacks or even pizza. Through this course I have learned a lot and am excited to apply this knowledge to more real-world problems.
